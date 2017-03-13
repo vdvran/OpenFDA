@@ -101,6 +101,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             html='''
             <html>
                 <head>
+                    <link rel="shortcut icon" href="http://www.infohep.org/Favicon.ashx?url=http://www.fda.gov:">
                     <title>OpenFDA</title>
                 </head>
                 <body>
