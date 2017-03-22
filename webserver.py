@@ -35,10 +35,9 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 			conn.request("GET", self.OPENFDA_API_EVENT + '?limit=10')
 		r1 = conn.getresponse()
 		data1=r1.read()
-		data= data1.decode('utf8')
-		event=data
+		event= data1.decode('utf8')
 		return event
-	
+
 	def get_drugs(self, events):
 		druglist=[]
 		info= json.loads(events)
@@ -89,35 +88,19 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 		'''
 		return html
 
-	def get_list_of_drugs(self, drugs):
+	def get_list(self, items):
 		html='''
 		<html>
 			<head></head>
 			<body>
 				<ul>
 		'''
-		for drug in drugs:
-			html +=" <li>"+drug+"</li>\n"
+		for item in items:
+			html +=" <li>"+item+"</li>\n"
 		html+='''
 				</ul>
 			</body>
 		</html>
-		'''
-		return html
-
-	def get_list_of_companies(self,companies):
-		html='''
-			<html>
-			<head></head>
-			<body>
-				<ul>
-		'''
-		for company in companies:
-			html +=" <li>"+company+"</li>\n"
-		html+='''
-				</ul>
-			</body>
-			</html>
 		'''
 		return html
 
@@ -132,23 +115,22 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 			html=self.get_main_page()
 		elif self.path=="/receivedrug?":
 			events=self.get_events(companyname,drugname)
-			drugs=self.get_drugs(events)
-			html= self.get_list_of_drugs(drugs)
+			items=self.get_drugs(events)
+			html= self.get_list(items)
 		elif self.path =="/receivecompany?":
 			events=self.get_events(companyname,drugname)
-			companies=self.get_companies(events)
-			html=self.get_list_of_companies(companies)
+			items=self.get_companies(events)
+			html=self.get_list(items)
 		elif "/searchdrug?" in self.path:
 			drugname=self.path.split('=')[-1]
 			events=self.get_events(drugname,companyname)
-			companies=self.get_companies(events)
-			html= self.get_list_of_companies(companies)
+			items=self.get_companies(events)
+			html= self.get_list(items)
 		elif "/searchcompany?" in self.path:
 			companyname= self.path.split('=')[-1]
 			events=self.get_events(companyname,drugname)
-			drugs=self.get_drugs(events)
-			html= self.get_list_of_drugs(drugs)
+			items=self.get_drugs(events)
+			html= self.get_list(items)
 		self.wfile.write(bytes(html, "utf8"))
 		return
 #<3<3<3<3
-
