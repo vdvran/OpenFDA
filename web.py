@@ -105,7 +105,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 		return html
 
 	def do_GET(self):
-		self.send_response(101)
+		self.send_response(200)
 		self.send_header('Content-type','text/html')
 		self.end_headers()
 		companyname=''
