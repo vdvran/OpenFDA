@@ -25,14 +25,14 @@ import json
 class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 	OPENFDA_API_URL='api.fda.gov'
 	OPENFDA_API_EVENT='/drug/event.json'
-	def get_events(self, companyname, drugname):
+	def get_events(self, company_name, drug_name,limit):
 		conn= http.client.HTTPSConnection(self.OPENFDA_API_URL)
-		if companyname!='':
-	     		conn.request("GET", self.OPENFDA_API_EVENT + '?search=companynumb='+companyname+'&limit=10')
-		elif drugname!='':
-	     		conn.request("GET", self.OPENFDA_API_EVENT + '?search=patient.drug.medicinalproduct='+drugname+'&limit=10')
+		if company_name!='':
+	     		conn.request("GET", self.OPENFDA_API_EVENT + '?search=companynumb='+company_name+'&limit='+limit)
+		elif drug_name!='':
+	     		conn.request("GET", self.OPENFDA_API_EVENT + '?search=patient.drug.medicinalproduct='+drug_name+'&limit='+limit)
 		else:
-			conn.request("GET", self.OPENFDA_API_EVENT + '?limit=10')
+			conn.request("GET", self.OPENFDA_API_EVENT + '?limit='+limit)
 		r1 = conn.getresponse()
 		data1=r1.read()
 		event= data1.decode('utf8')
@@ -58,33 +58,79 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 			companylist.append(company)
 		return companylist
 
+	def get_gender(self,events):
+		genderlist=[]
+		item=''
+		info= json.loads(events)
+		results=info["results"]
+		for event in results:
+			patient= event["patient"]
+			gender=patient["patientsex"]
+			if gender=='1':
+				item='Female'
+			elif gender=='2':
+				item='Male'
+			genderlist.append(item)
+		return genderlist
+
 	def get_main_page(self):
 		html='''
-			<html>
+		<html>
 			<head>
 				<link rel="shortcut icon" href="http://www.infohep.org/Favicon.ashx?url=http://www.fda.gov:">
 				<title>OpenFDA</title>
+			<style>
+				header {
+								font-size:150%;
+								font-family:"Lucida Sans Unicode", "Lucida Grande", sans-serif;
+    							padding: 1em;
+    							color: white;
+    							background-color: #87CEFA;
+    							text-align: center;
+				}
+				footer{
+						font-size:80%;
+						font-family:verdana;
+						padding: 1em;
+						color: white;
+						background-color: #87CEFA;
+						text-align: center;
+				}
+				.bottom {
+				 		background-color: #ADD8E6;
+    					border: 3px solid #000000;
+				}
+			</style>
 			</head>
 			<body>
-				<h1> OpenFDA Client</h1>
-				<form method= "get" action="receivedrug">
-					<input type="submit" value= "List of drugs">
-					</input>
+				<header>
+				<h1> OpenFDA</h1>
+				</header>
+				<form method= "get" action="listDrugs">
+					<input class= "bottom" type="submit" value= "List of drugs"></input>
+					Limit:<input type="text" size="4" name= "limit" ></input>
 				</form>
-				<form method= "get" action="receivecompany">
-					<input type="submit" value= "List of compamies">
-					</input>
+				<form method= "get" action="listCompanies">
+					<input class= "bottom" type="submit" value= "List of compamies"></input>
+					Limit:<input type="text"size="4" name= "limit" ></input>
 				</form>
-				<form method= "get" action="searchdrug">
-					<input type="text" name= "drug"></input>
-					<input type="submit" value= "Search companies"></input>
+				<form method= "get" action="searchDrug">
+					Drug name:<input type="text" name= "drug"></input>
+					<input type="submit" value= "Search companies" ></input>
+					Limit:<input type="text" size="4" name= "limit" ></input>
 				</form>
-				<form method= "get" action="searchcompany">
-					<input type="text" name= "company"></input>
+				<form method= "get" action="searchCompany">
+					Company name:<input type="text" name= "company"></input>
 					<input type="submit" value= "Search drugs"></input>
+
 				</form>
+				<form method= "get" action="gender">
+					<input class= "bottom" type="submit" value= "gender"></input>
+					Limit:<input type="text" size="4" name= "limit" ></input>
+				</form>
+				<footer>Copyright &copy; vduran</footer>
 			</body>
-			</html>
+		</html>
 		'''
 		return html
 
@@ -93,44 +139,96 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 		<html>
 			<head></head>
 			<body>
-				<ul>
+				<ol>
 		'''
 		for item in items:
 			html +=" <li>"+item+"</li>\n"
 		html+='''
-				</ul>
+				</ol>
 			</body>
 		</html>
 		'''
 		return html
-
-	def do_GET(self):
-		self.send_response(200)
+	def get_error(self):
+		html='''
+		<html>
+				<body>
+					<header>
+					<h1>Error 404</h1>
+					</header>
+					<p>not found</p>
+				</body>
+		</html>
+		'''
+		return html
+	def execute(self,html):
 		self.send_header('Content-type','text/html')
 		self.end_headers()
-		companyname=''
-		drugname=''
-		#caminos
-		if self.path == "/":
-			html=self.get_main_page()
-		elif self.path=="/receivedrug?":
-			events=self.get_events(companyname,drugname)
-			items=self.get_drugs(events)
-			html= self.get_list(items)
-		elif self.path =="/receivecompany?":
-			events=self.get_events(companyname,drugname)
-			items=self.get_companies(events)
-			html=self.get_list(items)
-		elif "/searchdrug?" in self.path:
-			drugname=self.path.split('=')[-1]
-			events=self.get_events(drugname,companyname)
-			items=self.get_companies(events)
-			html= self.get_list(items)
-		elif "/searchcompany?" in self.path:
-			companyname= self.path.split('=')[-1]
-			events=self.get_events(companyname,drugname)
-			items=self.get_drugs(events)
-			html= self.get_list(items)
 		self.wfile.write(bytes(html, "utf8"))
 		return
+
+	def do_GET(self):
+		company_name=''
+		drug_name=''
+		limit=''
+		#caminos
+		if self.path == '/':
+			self.send_response(200)
+			html=self.get_main_page()
+			self.execute(html)
+		elif "/listDrugs" in self.path:
+			self.send_response(200)
+			limit=self.path.split('=')[-1]
+			events=self.get_events(company_name,drug_name,limit)
+			items=self.get_drugs(events)
+			html= self.get_list(items)
+			self.execute(html)
+		elif "/listCompanies" in self.path:
+			self.send_response(200)
+			limit=self.path.split('=')[-1]
+			events=self.get_events(company_name,drug_name,limit)
+			items=self.get_companies(events)
+			html=self.get_list(items)
+			self.execute(html)
+		elif "/searchDrug" in self.path:
+			self.send_response(200)
+			drug_name=self.path.split('=')[-1]
+			'''
+			aux=self.path.split('?')[-1]
+			aux2=aux.split('&')
+			limit=aux2[0].split('=')[-1]
+			drug_name=aux2[-1].split('=')[-1]
+			'''
+			#print (drug_name)
+			#print (limit)
+			events=self.get_events(drug_name,company_name,limit)
+			items=self.get_companies(events)
+			html= self.get_list(items)
+			self.execute(html)
+		elif "/searchCompany" in self.path:
+			self.send_response(200)
+			company_name= self.path.split('=')[-1]
+			'''
+			aux=self.path.split('?')[-1]
+			aux2=aux.split('&')
+			limit=aux2[0].split('=')[-1]
+			company_name=aux2[-1].split('=')[-1]
+			'''
+			events=self.get_events(company_name,drug_name,limit)
+			items=self.get_drugs(events)
+			html= self.get_list(items)
+			self.execute(html)
+		elif "/gender" in self.path:
+			self.send_response(200)
+			limit=self.path.split('=')[-1]
+			events=self.get_events(company_name,drug_name,limit)
+			items=self.get_gender(events)
+			html=self.get_list(items)
+			self.execute(html)
+		else:
+			self.send_response(404)
+			html=self.get_error()
+			self.execute(html)
+		return
+
 #<3<3<3<3
