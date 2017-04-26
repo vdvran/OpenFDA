@@ -68,7 +68,9 @@ class OpenFDAHTML():
 	def get_list(self, items):
 		html='''
 		<html>
-			<head></head>
+			<head>
+			<link rel="shortcut icon" href="http://www.infohep.org/Favicon.ashx?url=http://www.fda.gov:">
+		</head>
 			<body>
 				<ol>
 		'''
@@ -76,7 +78,9 @@ class OpenFDAHTML():
 			html +=" <li>"+item+"</li>\n"
 		html+='''
 				</ol>
-			</body>
+				<input type="image" src= "https://image.flaticon.com/icons/png/512/61/61972.png" onclick="history.back()" width="30" height="30" >
+				</input>
+				</body>
 		</html>
 		'''
 		return html
@@ -90,7 +94,6 @@ class OpenFDAHTML():
 					<h1>Error 404</h1>
 					</header>
 					<p>not found</p>
-				</body>
 		</html>
 		'''
 		return html
@@ -151,12 +154,24 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 		items=parser.get_gender(events)
 		html=HTML.get_list(items)
 		return html
+
 	def limit_empty(self,limit):
 		if limit=='':
 			return True
-	def limit_error(self,limit):
-		if limit!= input(limit):
+
+	def limit_not_error(self,limit):
+		if limit.isdigit():
 			return True
+
+
+	def get_limit_normal(self,url):
+		limit=url.split('=')[-1]
+		if self.limit_not_error(limit):
+			return limit
+		#if not self.limit_not_error(limit):
+		else:
+			limit='10'
+			return limit
 
 	def do_GET(self):
 		company_name=''
@@ -165,6 +180,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 		client=OpenFDAClient()
 		HTML=OpenFDAHTML()
 		parser= OpenFDAParser()
+		url=self.path
 
 		#caminos
 		if self.path == '/':
@@ -172,7 +188,10 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 			html=HTML.get_main_page()
 			self.execute(html)
 		elif '/list'in self.path:
-			limit=self.path.split('=')[-1]
+			limit=self.get_limit_normal(url)
+			print (url)
+			print (type(limit))
+			#limit=url.split('=')[-1]
 			if self.limit_empty(limit):
 				limit='10'
 			if 'Drugs?limit=' in self.path:
@@ -189,7 +208,6 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 				self.execute(html)
 
 		elif '/search'in self.path:
-			print ('search')
 			if '&' in self.path:
 				aux=self.path.split('?')[-1].split('&')
 				limit=aux[-1].split('=')[-1]
@@ -219,6 +237,17 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 					limit='10'
 					html=self.content_drugs(limit,company_name,drug_name)
 					self.execute(html)
+
+		elif self.path== "/secret":
+			self.send_response(401)
+			self.send_header('WWW-Authenticate','Basic realm="nmrs_m7VKmomQ2YM3"' )
+			self.end_headers()
+
+		elif self.path=="/redirect":
+			self.send_response(302)
+			self.send_header("Location","http://localhost:8000/")
+			self.end_headers()
+
 		else:
 			self.send_response(404)
 			html=HTML.get_error()
